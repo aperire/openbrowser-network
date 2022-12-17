@@ -1,0 +1,19 @@
+{
+  "name": "openbrowser-network",
+  "version": "1.0.0",
+  "description": "Openbrowser Network",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aperire/openbrowser-network.git"
+  },
+  "author": "Eric Lee",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aperire/openbrowser-network/issues"
+  },
+  "homepage": "https://github.com/aperire/openbrowser-network#readme"
+}
