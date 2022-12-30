@@ -44,10 +44,14 @@ contract OpenBrowser {
 
     // Validator Struct
     struct ValidatorInfo {
+        uint opbStake;
         uint commissionRate;
+        uint startEpoch;
+        uint voteNum;
         uint voteSuccessRate;
         address validatorAddress;
     }
+
 
     // Storage Struct
     struct StorageInfo {
@@ -82,13 +86,12 @@ contract OpenBrowser {
     /*
     Client Functions
     */
-    function clientDepositCredit() public payable {
+    function clientDepositCredit() public {
         address _client = msg.sender;
         clientCredit[_client] += msg.value;
-        
     }
 
-    function clientWithdrawCredit(uint _amount) public {
+    function clientWithdrawCredit(uint _amount) public payable {
         require(_amount >= clientCredit[msg.sender], "insufficient balance");
         address payable _client = payable(msg.sender);
         clientCredit[msg.sender] -= _amount;
@@ -145,7 +148,7 @@ contract OpenBrowser {
         StorageInfo memory storageInfo = StorageInfo(
             _pricePerByte, _endpoint, _storageLimit, defaultCredibilityScore, msg.sender, _status
         );
-        storageInfoMap[msg.sender] = StorageInfo;
+        storageInfoMap[msg.sender] = storageInfo;
     }
 
     function updateStorageInfo() {
