@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.15;
 import "./IERC20.sol";
 
@@ -29,11 +28,11 @@ contract OpenBrowser {
     // OPB Token Address
     IERC20 OPB = IERC20(0x87c6eCcD1074108f71843368DE3ccC86274217dF);
 
-
     // Data Struct
     struct DataInfo {
         address[] associatedStorageAddress;
         string sha256Data;
+        uint price;
         uint validated; // 1 for validated
     }
 
@@ -44,10 +43,14 @@ contract OpenBrowser {
 
     // Validator Struct
     struct ValidatorInfo {
+        uint opbStake;
         uint commissionRate;
+        uint startEpoch;
+        uint voteNum;
         uint voteSuccessRate;
         address validatorAddress;
     }
+
 
     // Storage Struct
     struct StorageInfo {
@@ -62,7 +65,8 @@ contract OpenBrowser {
     /*
     Global Functions
     */
-    function clientPostTransaction(
+    // simulateTransaction: Ran by client
+    function simulateTransaction(
         uint _byteSize, string memory _pubkey, string memory _sha256data, address[] memory _storageArray, uint[] memory _storageWeight
     ) public {
         // Calculate price
@@ -76,7 +80,22 @@ contract OpenBrowser {
             totalPrice += price;
         }
         require (clientCredit[msg.sender] >= totalPrice, "insufficient credit");
+        DataInfo memory dataInfo = DataInfo(_storageArray, _sha256data, totalPrice, 0);
+        pubkeyDataMap[_pubkey] = dataInfo;
+    }
 
+    // voteInvalidStorage: Ran by validator to validate storage
+    function voteInvalidStorage(
+        
+    ) {
+
+    }
+
+    // voteInvalidPubkey: Ran by validator to validate malicious data posted by client
+    function voteInvalidPubkey(
+
+    ) {
+        
     }
 
     /*
@@ -85,10 +104,9 @@ contract OpenBrowser {
     function clientDepositCredit() public payable {
         address _client = msg.sender;
         clientCredit[_client] += msg.value;
-        
     }
 
-    function clientWithdrawCredit(uint _amount) public {
+    function clientWithdrawCredit(uint _amount) public payable {
         require(_amount >= clientCredit[msg.sender], "insufficient balance");
         address payable _client = payable(msg.sender);
         clientCredit[msg.sender] -= _amount;
@@ -103,7 +121,7 @@ contract OpenBrowser {
     function registerValidator(
         uint _commissionRate,
         uint _opbStake
-    ) public {
+    ) public payable {
         require(OPB.allowance(msg.sender, address(this)) == _opbStake, "Insufficient Allowance");
         require(OPB.transferFrom(msg.sender, address(this), _opbStake), "Transfer succesful"); 
 
@@ -135,7 +153,7 @@ contract OpenBrowser {
     */
     function registerStorage(
         uint _pricePerByte, string memory _endpoint, uint _storageLimit, uint _status
-    ) public  {
+    ) public payable {
         // Pay one time register fee (0.1 ETH)
         require(msg.value==100000000000000000);
         storageRegistrationFee += msg.value;
@@ -145,7 +163,7 @@ contract OpenBrowser {
         StorageInfo memory storageInfo = StorageInfo(
             _pricePerByte, _endpoint, _storageLimit, defaultCredibilityScore, msg.sender, _status
         );
-        storageInfoMap[msg.sender] = StorageInfo;
+        storageInfoMap[msg.sender] = storageInfo;
     }
 
     function updateStorageInfo() {
