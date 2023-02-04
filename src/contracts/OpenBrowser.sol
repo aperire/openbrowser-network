@@ -18,7 +18,9 @@ contract OpenBrowser {
         uint paidAmount;
         address storageAddress;
         address creator;
-        bool isValidated;
+        uint voteInvalid;
+        uint uploadedTimestamp;
+        uint expiryTimestamp;
     }
 
     /*
@@ -39,6 +41,7 @@ contract OpenBrowser {
         uint totalValidVotes;
         address validatorAddress;
         uint whisteBlowerRewardAmount;
+        bool thisEpochVoted;
     }
 
     /*
@@ -64,19 +67,34 @@ contract OpenBrowser {
     */
     string[] public blockArray; //Store pubkey of recent one block
     uint currentEpoch;
+    uint currentEpochTimestamp;
+    uint minEpochDelta;
+    address[] currentEpochVotedValidators;
+    uint public blockRewards;
 
     /*
     Party Registration Functions
     */
+
+    /*
+    - Check
+
+    - Instruction
+    */
     function registerValidator() public {
         require(validatorInfoMap[msg.sender].validatorAddress == address(0), "Validator is registered");
         ValidatorInfo memory validatorInfo = ValidatorInfo(
-            0, 0, currentEpoch, 0, msg.sender, 0
+            0, 0, currentEpoch, 0, msg.sender, 0, false
         );
         validatorAddressArray.push(msg.sender);
         validatorInfoMap[msg.sender] = validatorInfo;
     }
 
+    /*
+    - Check
+
+    - Instruction
+    */
     function registerStorage(
         uint _pricePerByte, string memory _endpoint, uint _storageByteLimit
     ) public {
@@ -89,6 +107,12 @@ contract OpenBrowser {
     /*
     Account Management Functions
     */
+
+    /*
+    - Check
+
+    - Instruction
+    */
     function validatorDepositStake(uint _amount) public {
         require(validatorInfoMap[msg.sender].validatorAddress == msg.sender, "Create validator account before deposit");
         require(_amount > 0, "Need to be above 0");
@@ -98,6 +122,11 @@ contract OpenBrowser {
         require(OPB.transferFrom(msg.sender, address(this), _amount), "Transfer Failed");
     }
 
+    /*
+    - Check
+
+    - Instruction
+    */
     function validatorWithdrawStake(uint _amount) public {
         require(validatorInfoMap[msg.sender].validatorAddress == msg.sender, "Create validator account before deposit");
         require(_amount > 0, "Need to be above 0");
@@ -109,6 +138,11 @@ contract OpenBrowser {
         require(OPB.transferFrom(address(this), msg.sender, _amount), "Withdraw Failed");
     }
 
+    /*
+    - Check
+
+    - Instruction
+    */
     function validatorWithdrawGasReward(uint _amount) public {
         require(validatorInfoMap[msg.sender].validatorAddress == msg.sender, "Create validator account before deposit");
         require(_amount > 0, "Need to be above 0");
@@ -125,6 +159,12 @@ contract OpenBrowser {
     /*
     Payment Functions
     */
+
+    /*
+    - Check
+
+    - Instruction
+    */
     function postTransaction(
         uint _byteSize, string memory _pubkey, address _storageAddress
     ) public {
@@ -133,23 +173,63 @@ contract OpenBrowser {
         // Check
         require(msg.value == uploadPrice, "Payment amount does not match");
         storageInfoMap[_storageAddress].gasRewardAmount += msg.value * 9 / 10;
-        currentEpochGasRewards += msg.value / 10;
+
         // Add dataInfo to block (not add to pubkeyArray until validated)
-        DataInfo memory dataInfo = DataInfo(uploadPrice, _storageAddress, msg.sender, false);
+        DataInfo memory dataInfo = DataInfo(uploadPrice, _storageAddress, msg.sender, 0, 0, 0);
         dataInfoMap[_pubkey] = dataInfo;
-        pubkeyMempoolArray.push(_pubkey)
+        pubkeyMempoolArray.push(_pubkey);
         blockArray.push(_pubkey);
     }
 
     /*
     Validator Functions
     */
+    
+    /*
+    - Check
+
+    - Instruction
+    */
     function voteInvalidPubkeyInLastBlock(string [] memory _invalidPubkeyArray) public {
         require(validatorInfoMap[msg.sender].validatorAddress == msg.sender, "Only Validators can vote");
+        uint validatorStake = validatorInfoMap[msg.sender].opbStakedAmount;
+        currentEpochOpbVoted += validatorStake;
+        currentEpochVotedValidators.push(msg.sender);
+        // Invalid pubkeys are simply rejected
+        for (uint i=0; i<_invalidPubkeyArray.length; i++) {
+            DataInfo memory dataInfo = dataInfoMap[_invalidPubkeyArray[i]];
+            dataInfo.voteInvalid += validatorStake;
+        }
+    }
+    
+    /*
+    - Check
 
+    - Instruction
+    */
+
+    function finalizeBlockAndDistributeRewards() public {
+        require(validatorInfoMap[msg.sender].validatorAddress == msg.sender, "Only Validators can vote");
+        require(currentEpochOpbVoted >= totalStakedOpb/2, "Insufficient Quorum reached");
+        require(block.timestamp - currentEpochTimestamp >= minEpochDelta, "Epoch not finalized");
+
+        for (uint i=0; pubkeyMempoolArray.length; i++) {
+            string memory pubkey = pubkeyMempoolArray[i];
+            DataInfo memory dataInfo = dataInfoMap[msg.sender];
+            if (dataInfo.voteInvalid < currentEpochOpbVoted/2) {
+                pubkeyArray.push(dataInfo);
+                currentEpochGasRewards += dataInfo.paidAmount / 10;
+            }
+        }
+
+        for (uint i=0; i<currentEpochVotedValidators.length; i++) {
+            ValidatorInfo memory validatorInfo = validatorInfoMap[currentEpochVotedValidators[i]];
+            uint gasReward = currentEpochGasRewards / validatorInfo.opbStakedAmount;
+            uint
+        }
     }
 
-    function whistleBlowerReportDeletedPubkey()
+    // function whistleBlowerReportDeletedPubkey()
 
 
 
